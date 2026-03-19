@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+groq
+langgraph
+langchain
+langchain-groq
+opencv-python
+ultralytics
+websockets
