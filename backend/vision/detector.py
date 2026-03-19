@@ -54,8 +54,12 @@ def build_context_string(detections):
     if not detections:
         return "No objects detected ahead."
 
-    summary = []
+    counts = {}
     for d in detections:
-        summary.append(f"{d['label']} (confidence: {d['confidence']})")
+        counts[d['label']] = counts.get(d['label'], 0) + 1
+
+    summary = []
+    for label, count in counts.items():
+        summary.append(f"{count} {label}{'s' if count > 1 else ''}")
 
     return "Currently detected on road: " + ", ".join(summary)

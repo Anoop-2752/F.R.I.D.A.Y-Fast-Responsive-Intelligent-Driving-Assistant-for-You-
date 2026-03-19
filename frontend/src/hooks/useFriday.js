@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import axios from "axios"
+import { useSpeech } from "./useSpeech"
 
 const BASE_URL = "http://localhost:8000"
 
@@ -13,12 +14,15 @@ export function useFriday() {
   ])
   const [loading, setLoading] = useState(false)
   const [detections, setDetections] = useState([])
+  const [routeMap, setRouteMap] = useState(null)
   const [stats, setStats] = useState({
     hazards: 0,
     detections: 0,
-    latency: 0,
+    latency: "--",
     eta: "--"
   })
+
+  const { speak, stop, speaking, enabled: voiceEnabled, toggle: toggleVoice } = useSpeech()
 
   const sendMessage = async (text) => {
     if (!text.trim()) return
@@ -38,10 +42,17 @@ export function useFriday() {
         tools: res.data.tools_used || []
       }])
 
+      speak(res.data.response)
+
+      if (res.data.route_map?.coords?.length > 0) {
+        setRouteMap(res.data.route_map)
+      }
+
+      const etaMatch = res.data.route_data?.match(/(\d+)\s*minute/)
       setStats(prev => ({
         ...prev,
-        latency,
-        detections: prev.detections + 1
+        latency: `${latency}`,
+        eta: etaMatch ? `${etaMatch[1]}m` : prev.eta
       }))
 
     } catch {
@@ -55,27 +66,50 @@ export function useFriday() {
     setLoading(false)
   }
 
-  const analyzeVision = async () => {
+  const handleVoiceResult = ({ transcription, response, tools, latency, route_map }) => {
+    setMessages(prev => [
+      ...prev,
+      { role: "user", text: `🎤 ${transcription}`, tools: [] },
+      { role: "ai", text: response, tools }
+    ])
+    speak(response)
+    if (latency) setStats(prev => ({ ...prev, latency }))
+    if (route_map?.coords?.length > 0) setRouteMap(route_map)
+  }
+
+  const analyzeVision = useCallback(async () => {
     try {
       const res = await axios.post(`${BASE_URL}/vision/analyze`)
-      setDetections(res.data.detections || [])
+      const detected = res.data.detections || []
+      setDetections(detected)
 
-      const hazards = res.data.detections?.filter(d =>
+      const hazards = detected.filter(d =>
         ["person", "dog"].includes(d.label)
-      ).length || 0
+      ).length
 
-      setStats(prev => ({ ...prev, hazards }))
+      setStats(prev => ({
+        ...prev,
+        hazards,
+        detections: prev.detections + detected.length
+      }))
     } catch {
       setDetections([])
     }
-  }
+  }, [])
 
   return {
     messages,
     loading,
     detections,
+    routeMap,
+    setRouteMap,
     stats,
     sendMessage,
-    analyzeVision
+    analyzeVision,
+    handleVoiceResult,
+    speaking,
+    voiceEnabled,
+    toggleVoice,
+    stopSpeaking: stop
   }
 }

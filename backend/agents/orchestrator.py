@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
-from typing import TypedDict, List
+from typing import TypedDict, List, Optional
 from tools.weather import get_weather
 from tools.maps import get_route
 from dotenv import load_dotenv
@@ -25,8 +25,10 @@ class AgentState(TypedDict):
     vision_context: str
     weather_data: str
     route_data: str
+    route_map: Optional[dict]
     response: str
     tools_used: List[str]
+    location_context: str       # city the dashcam video is from (empty = use local city)
 
 
 def router_node(state: AgentState) -> AgentState:
@@ -45,7 +47,7 @@ def router_node(state: AgentState) -> AgentState:
     tools_used = []
 
     if needs_weather:
-        location = extract_location(message) or "Pattambi"
+        location = extract_location(message) or state.get("location_context") or "Pattambi"
         weather = get_weather(location)
         state["weather_data"] = weather
         tools_used.append("weather")
@@ -54,7 +56,8 @@ def router_node(state: AgentState) -> AgentState:
         origin, destination = extract_route(message)
         if destination:
             route = get_route(origin, destination)
-            state["route_data"] = route
+            state["route_data"] = route["text"]
+            state["route_map"] = route
             tools_used.append("navigation")
 
     state["tools_used"] = tools_used
@@ -97,11 +100,13 @@ def responder_node(state: AgentState) -> AgentState:
         context_parts.append(f"Navigation: {state['route_data']}")
 
     context = "\n".join(context_parts)
-
     full_prompt = f"{context}\n\nDriver says: {state['message']}" if context else state["message"]
 
+    location_note = f"\nCurrent driving location: {state['location_context']}." if state.get("location_context") else ""
+    system = SYSTEM_PROMPT + location_note
+
     response = llm.invoke([
-        SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=system),
         HumanMessage(content=full_prompt)
     ])
 
@@ -111,28 +116,27 @@ def responder_node(state: AgentState) -> AgentState:
 
 def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
-
     graph.add_node("router", router_node)
     graph.add_node("responder", responder_node)
-
     graph.set_entry_point("router")
     graph.add_edge("router", "responder")
     graph.add_edge("responder", END)
-
     return graph.compile()
 
 
 friday_agent = build_graph()
 
 
-def run_agent(message: str, vision_context: str = "") -> dict:
+def run_agent(message: str, vision_context: str = "", location_context: str = None) -> dict:
     initial_state = AgentState(
         message=message,
         vision_context=vision_context,
         weather_data="",
         route_data="",
+        route_map=None,
         response="",
-        tools_used=[]
+        tools_used=[],
+        location_context=location_context or ""
     )
 
     result = friday_agent.invoke(initial_state)
@@ -140,5 +144,7 @@ def run_agent(message: str, vision_context: str = "") -> dict:
     return {
         "response": result["response"],
         "tools_used": result["tools_used"],
-        "vision_context": vision_context
+        "vision_context": vision_context,
+        "route_data": result.get("route_data", ""),
+        "route_map": result.get("route_map")
     }
