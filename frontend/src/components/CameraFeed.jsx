@@ -11,7 +11,13 @@ const COLORS = {
   default: "#5DCAA5"
 }
 
-export default function CameraFeed({ detections, onAnalyze }) {
+const ALERT_STYLES = {
+  critical: "bg-red-500/90 border-red-400 text-white",
+  warning:  "bg-amber-500/90 border-amber-400 text-white",
+  info:     "bg-blue-500/90 border-blue-400 text-white",
+}
+
+export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
   const intervalRef = useRef(null)
   const [source, setSource] = useState("webcam")
   const [videos, setVideos] = useState([])
@@ -185,6 +191,12 @@ export default function CameraFeed({ detections, onAnalyze }) {
         {activeVideo && (
           <div className="absolute top-2 left-2 bg-black/60 rounded px-2 py-1 max-w-[60%]">
             <span className="text-green-400 text-xs truncate block">{activeVideo}</span>
+          </div>
+        )}
+
+        {activeAlert && (
+          <div className={`absolute top-3 left-1/2 -translate-x-1/2 border rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg animate-pulse pointer-events-none ${ALERT_STYLES[activeAlert.severity]}`}>
+            <span className="text-sm font-semibold tracking-wide">{activeAlert.message}</span>
           </div>
         )}
 

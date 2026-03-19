@@ -13,6 +13,7 @@ export default function Dashboard() {
     routeMap,
     setRouteMap,
     stats,
+    activeAlert,
     sendMessage,
     analyzeVision,
     handleVoiceResult,
@@ -32,6 +33,7 @@ export default function Dashboard() {
           <CameraFeed
             detections={detections}
             onAnalyze={analyzeVision}
+            activeAlert={activeAlert}
           />
           <StatsRow stats={stats} />
         </div>
