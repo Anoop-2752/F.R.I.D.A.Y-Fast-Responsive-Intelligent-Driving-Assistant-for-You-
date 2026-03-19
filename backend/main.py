@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from groq import Groq
 from vision.detector import detect_frame, frame_to_base64, build_context_string
+from agents.orchestrator import run_agent
 import cv2
 import os
 
@@ -19,11 +20,6 @@ app.add_middleware(
 )
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-SYSTEM_PROMPT = """You are F.R.I.D.A.Y, an intelligent in-car AI co-pilot assistant.
-You are helpful, concise, and safety-aware.
-Always keep responses short and clear since the driver is on the road.
-Never give long responses — max 2-3 sentences."""
 
 
 @app.get("/")
@@ -44,20 +40,12 @@ async def chat(payload: dict):
         _, detections = detect_frame(frame)
         vision_context = build_context_string(detections)
 
-    full_message = f"{vision_context}\n\nDriver says: {user_message}"
-
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": full_message}
-        ]
+    result = run_agent(
+        message=user_message,
+        vision_context=vision_context
     )
 
-    return {
-        "response": response.choices[0].message.content,
-        "vision_context": vision_context
-    }
+    return result
 
 
 @app.post("/voice")
@@ -80,20 +68,14 @@ async def voice(file: UploadFile = File(...)):
         _, detections = detect_frame(frame)
         vision_context = build_context_string(detections)
 
-    full_message = f"{vision_context}\n\nDriver says: {user_text}"
-
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": full_message}
-        ]
+    result = run_agent(
+        message=user_text,
+        vision_context=vision_context
     )
 
     return {
         "transcription": user_text,
-        "response": response.choices[0].message.content,
-        "vision_context": vision_context
+        **result
     }
 
 

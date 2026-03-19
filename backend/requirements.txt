@@ -4,6 +4,7 @@ python-dotenv
 groq
 langgraph
 langchain
+langchain-core
 langchain-groq
 opencv-python
 ultralytics
