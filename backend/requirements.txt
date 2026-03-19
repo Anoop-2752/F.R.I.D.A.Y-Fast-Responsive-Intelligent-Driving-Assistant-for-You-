@@ -8,3 +8,4 @@ langchain-groq
 opencv-python
 ultralytics
 websockets
+numpy
