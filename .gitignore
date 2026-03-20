@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Videos — large files, not needed in repo
+backend/videos/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
