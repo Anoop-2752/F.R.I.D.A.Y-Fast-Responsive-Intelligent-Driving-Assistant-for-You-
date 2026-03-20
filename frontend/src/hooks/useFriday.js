@@ -4,13 +4,12 @@ import { useSpeech } from "./useSpeech"
 
 // Alert config: label → { message, severity: "critical" | "warning" | "info", cooldown ms }
 const ALERT_RULES = {
-  person:        { message: "Pedestrian detected ahead — reduce speed",     severity: "critical", cooldown: 12000 },
-  dog:           { message: "Animal on road ahead — caution",               severity: "critical", cooldown: 12000 },
-  motorcycle:    { message: "Motorcyclist nearby — maintain safe distance",  severity: "warning",  cooldown: 15000 },
-  bicycle:       { message: "Cyclist ahead — slow down",                    severity: "warning",  cooldown: 15000 },
-  truck:         { message: "Large vehicle ahead — keep safe distance",     severity: "warning",  cooldown: 20000 },
-  "traffic light": { message: "Traffic signal ahead",                       severity: "info",     cooldown: 20000 },
-  "stop sign":   { message: "Stop sign ahead",                              severity: "warning",  cooldown: 20000 },
+  person:      { message: "Pedestrian in path — reduce speed",          severity: "critical", cooldown: 30000 },
+  dog:         { message: "Animal on road — caution",                   severity: "critical", cooldown: 30000 },
+  motorcycle:  { message: "Motorcyclist ahead — maintain safe distance", severity: "warning",  cooldown: 35000 },
+  bicycle:     { message: "Cyclist ahead — slow down",                  severity: "warning",  cooldown: 35000 },
+  truck:       { message: "Large vehicle ahead — keep safe distance",   severity: "warning",  cooldown: 40000 },
+  "stop sign": { message: "Stop sign ahead",                            severity: "warning",  cooldown: 40000 },
 }
 
 const BASE_URL = "http://localhost:8000"
@@ -36,8 +35,9 @@ export function useFriday() {
   const { speak, stop, speaking, enabled: voiceEnabled, toggle: toggleVoice } = useSpeech()
 
   const [activeAlert, setActiveAlert] = useState(null)
-  const alertCooldowns = useRef({})   // label → timestamp of last alert
+  const alertCooldowns = useRef({})     // label → timestamp of last alert
   const alertTimerRef = useRef(null)
+  const prevDetections = useRef([])     // last frame detections for motion check
 
   const triggerAlert = useCallback((label, rule) => {
     const now = Date.now()
@@ -122,15 +122,43 @@ export function useFriday() {
         detections: prev.detections + detected.length
       }))
 
-      // Fire proactive alert for the highest-priority new detection
-      const priority = ["person", "dog", "motorcycle", "bicycle", "stop sign", "traffic light", "truck"]
-      for (const label of priority) {
-        const rule = ALERT_RULES[label]
-        if (rule && detected.some(d => d.label === label)) {
-          triggerAlert(label, rule)
-          break  // only one alert at a time
-        }
+      // Check 1: object must be in center horizontal zone (not on pavement/sides)
+      const isCentral = (box) => {
+        const frameW = 640
+        const cx = (box.x1 + box.x2) / 2
+        return cx / frameW > 0.25 && cx / frameW < 0.75
       }
+
+      // Check 2: object must be in lower 65% of frame (on the road surface, not distant)
+      const isOnRoad = (box) => {
+        const frameH = 480
+        const cy = (box.y1 + box.y2) / 2
+        return cy / frameH > 0.35
+      }
+
+      // Check 3: car is moving — bounding box center must have shifted since last frame
+      const isMoving = (box, label) => {
+        const prev = prevDetections.current.find(p => p.label === label)
+        if (!prev) return true  // new detection = approaching, treat as moving
+        const prevCx = (prev.box.x1 + prev.box.x2) / 2
+        const prevCy = (prev.box.y1 + prev.box.y2) / 2
+        const currCx = (box.x1 + box.x2) / 2
+        const currCy = (box.y1 + box.y2) / 2
+        const delta = Math.abs(currCx - prevCx) + Math.abs(currCy - prevCy)
+        return delta > 10  // pixels moved — if < 10px, car is effectively stopped
+      }
+
+      // Only alert for persons/dogs on road while moving
+      const match = detected.find(d =>
+        ["person", "dog"].includes(d.label) &&
+        isCentral(d.box) &&
+        isOnRoad(d.box) &&
+        isMoving(d.box, d.label)
+      )
+      if (match) triggerAlert(match.label, ALERT_RULES[match.label])
+
+      // Save current frame for next comparison
+      prevDetections.current = detected
     } catch {
       setDetections([])
     }

@@ -3,18 +3,18 @@ import axios from "axios"
 
 const BASE_URL = "http://localhost:8000"
 
-const COLORS = {
-  person: "#E24B4A",
-  car: "#EF9F27",
-  truck: "#EF9F27",
-  bus: "#EF9F27",
-  default: "#5DCAA5"
+const LABEL_COLORS = {
+  person: "#f87171",
+  car: "#fb923c",
+  truck: "#fb923c",
+  bus: "#fb923c",
+  default: "#4ade80"
 }
 
 const ALERT_STYLES = {
-  critical: "bg-red-500/90 border-red-400 text-white",
-  warning:  "bg-amber-500/90 border-amber-400 text-white",
-  info:     "bg-blue-500/90 border-blue-400 text-white",
+  critical: { bar: "bg-red-500/95 border-red-400",   text: "text-white", dot: "bg-red-300" },
+  warning:  { bar: "bg-amber-500/95 border-amber-400", text: "text-white", dot: "bg-amber-300" },
+  info:     { bar: "bg-sky-500/95 border-sky-400",    text: "text-white", dot: "bg-sky-300" },
 }
 
 export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
@@ -26,18 +26,15 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
   const [locationInput, setLocationInput] = useState("")
   const [activeLocation, setActiveLocation] = useState("")
 
-  const streamUrl =
-    source === "video"
-      ? `${BASE_URL}/video/stream`
-      : `${BASE_URL}/vision/stream`
+  const streamUrl = source === "video"
+    ? `${BASE_URL}/video/stream`
+    : `${BASE_URL}/vision/stream`
 
   const loadVideos = useCallback(async () => {
     try {
       const res = await axios.get(`${BASE_URL}/video/list`)
       setVideos(res.data.videos || [])
-    } catch {
-      setVideos([])
-    }
+    } catch { setVideos([]) }
   }, [])
 
   useEffect(() => {
@@ -52,9 +49,7 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
       setActiveVideo(filename)
       setSource("video")
       setShowPicker(false)
-    } catch {
-      alert("Could not select video. Check backend.")
-    }
+    } catch { alert("Could not select video.") }
   }
 
   const setLocation = async () => {
@@ -64,9 +59,7 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
       await axios.post(`${BASE_URL}/video/location`, { location: loc })
       setActiveLocation(loc)
       setLocationInput("")
-    } catch {
-      alert("Could not set location.")
-    }
+    } catch { alert("Could not set location.") }
   }
 
   const switchToWebcam = async () => {
@@ -77,44 +70,35 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
     setLocationInput("")
   }
 
-  const openPicker = () => {
-    loadVideos()
-    setShowPicker(true)
-  }
+  const alertStyle = activeAlert ? ALERT_STYLES[activeAlert.severity] : null
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-white/5 overflow-hidden flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 border border-white/5 rounded-sm overflow-hidden" style={{ background: "#0c0c14" }}>
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-          <span className="text-xs text-gray-400 font-medium">YOLOv8 live</span>
-          <span className="text-xs text-green-400 border border-green-400/30 rounded px-1.5 py-0.5">
-            {source === "video" ? "dashcam" : "webcam"}
+        <div className="flex items-center gap-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          <span className="font-hud text-xs tracking-[0.15em] text-white/50 uppercase">Vision / YOLOv8</span>
+          <span className="font-hud text-[10px] tracking-widest border border-white/10 rounded-sm px-2 py-0.5 text-white/30">
+            {source === "video" ? "DASHCAM" : "WEBCAM"}
           </span>
           {activeLocation && (
-            <span className="text-xs text-amber-400 border border-amber-400/30 rounded px-1.5 py-0.5">
-              {activeLocation}
+            <span className="font-hud text-[10px] tracking-widest border border-amber-400/30 rounded-sm px-2 py-0.5 text-amber-400/70">
+              {activeLocation.toUpperCase()}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">{detections.length} objects detected</span>
+        <div className="flex items-center gap-3">
+          <span className="font-data text-[10px] text-white/20">{detections.length} obj</span>
           {source === "video" ? (
-            <button
-              onClick={switchToWebcam}
-              className="text-xs px-2 py-0.5 rounded border border-blue-400/30 text-blue-400 hover:bg-blue-400/10 transition-colors"
-            >
-              Use Webcam
+            <button onClick={switchToWebcam} className="font-hud text-[10px] tracking-wider px-2 py-0.5 border border-sky-400/20 text-sky-400/60 hover:text-sky-400 hover:border-sky-400/40 transition-colors rounded-sm">
+              WEBCAM
             </button>
           ) : (
-            <button
-              onClick={openPicker}
-              className="text-xs px-2 py-0.5 rounded border border-green-400/30 text-green-400 hover:bg-green-400/10 transition-colors"
-            >
-              Load Dashcam
+            <button onClick={() => { loadVideos(); setShowPicker(true) }} className="font-hud text-[10px] tracking-wider px-2 py-0.5 border border-green-400/20 text-green-400/60 hover:text-green-400 hover:border-green-400/40 transition-colors rounded-sm">
+              DASHCAM
             </button>
           )}
         </div>
@@ -122,25 +106,20 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
 
       {/* Video picker */}
       {showPicker && (
-        <div className="border-b border-white/5 bg-gray-950 px-4 py-3">
+        <div className="border-b border-white/5 px-4 py-3" style={{ background: "#080810" }}>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400">
-              Videos in <span className="text-green-400">backend/videos/</span>
+            <p className="font-hud text-[10px] tracking-widest text-white/30 uppercase">
+              Videos — <span className="text-green-400/60">backend/videos/</span>
             </p>
-            <button onClick={() => setShowPicker(false)} className="text-xs text-gray-600 hover:text-gray-400">✕</button>
+            <button onClick={() => setShowPicker(false)} className="text-white/20 hover:text-white/50 text-xs">✕</button>
           </div>
           {videos.length === 0 ? (
-            <p className="text-xs text-gray-600">
-              No videos found. Drop .mp4 / .avi / .mov files into <span className="text-amber-400">backend/videos/</span>.
-            </p>
+            <p className="text-xs text-white/20">No videos found. Drop .mp4 / .avi / .mov into <span className="text-amber-400/60">backend/videos/</span>.</p>
           ) : (
-            <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-              {videos.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => selectVideo(v)}
-                  className="text-left text-xs text-gray-300 hover:text-green-400 px-2 py-1.5 rounded hover:bg-white/5 transition-colors truncate"
-                >
+            <div className="flex flex-col gap-0.5 max-h-28 overflow-y-auto">
+              {videos.map(v => (
+                <button key={v} onClick={() => selectVideo(v)}
+                  className="text-left text-xs text-white/40 hover:text-green-400 px-2 py-1.5 hover:bg-white/3 transition-colors truncate font-data">
                   {v}
                 </button>
               ))}
@@ -149,78 +128,75 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
         </div>
       )}
 
-      {/* Location bar — shown when video is active */}
+      {/* Location bar */}
       {source === "video" && (
-        <div className="border-b border-white/5 bg-gray-950 px-4 py-2 flex items-center gap-2">
-          <span className="text-xs text-gray-500 shrink-0">Video city:</span>
+        <div className="border-b border-white/5 px-4 py-2 flex items-center gap-2" style={{ background: "#080810" }}>
+          <span className="font-hud text-[10px] tracking-widest text-white/25 shrink-0 uppercase">City</span>
           <input
             type="text"
             value={locationInput}
             onChange={e => setLocationInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && setLocation()}
-            placeholder={activeLocation || "e.g. New York, Mumbai, Kochi..."}
-            className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 outline-none focus:border-amber-400/40"
+            placeholder={activeLocation || "New York, Mumbai, Kochi..."}
+            className="flex-1 bg-transparent border-none outline-none text-xs text-white/50 placeholder-white/15 font-data"
           />
-          <button
-            onClick={setLocation}
-            className="text-xs px-2 py-1 rounded border border-amber-400/30 text-amber-400 hover:bg-amber-400/10 transition-colors shrink-0"
-          >
-            Set
+          <button onClick={setLocation}
+            className="font-hud text-[10px] tracking-wider px-2 py-0.5 border border-amber-400/20 text-amber-400/60 hover:text-amber-400 hover:border-amber-400/40 transition-colors rounded-sm shrink-0">
+            SET
           </button>
         </div>
       )}
 
       {/* Feed */}
-      <div className="relative bg-gray-950 flex-1 min-h-0 flex items-center justify-center">
+      <div className="relative flex-1 min-h-0 flex items-center justify-center" style={{ background: "#050508" }}>
         <img
           key={streamUrl}
           src={streamUrl}
           alt="camera feed"
           className="w-full h-full object-cover"
-          onError={(e) => { e.target.style.display = "none" }}
+          onError={e => { e.target.style.display = "none" }}
         />
 
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          {detections.length === 0 && (
-            <p className="text-gray-600 text-sm">
-              {source === "video" ? "Processing dashcam..." : "Waiting for camera feed..."}
-            </p>
-          )}
+        {/* HUD corner brackets */}
+        <div className="hud-corners" />
+
+        {/* Extra corners (bottom-left, top-right) */}
+        <div className="absolute inset-3 pointer-events-none">
+          <span className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-sky-400/60" />
+          <span className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-sky-400/60" />
         </div>
+
+        {detections.length === 0 && (
+          <p className="absolute font-hud text-xs tracking-widest text-white/15 uppercase pointer-events-none">
+            {source === "video" ? "Initialising feed..." : "Awaiting camera..."}
+          </p>
+        )}
 
         {activeVideo && (
-          <div className="absolute top-2 left-2 bg-black/60 rounded px-2 py-1 max-w-[60%]">
-            <span className="text-green-400 text-xs truncate block">{activeVideo}</span>
+          <div className="absolute top-4 left-4 font-data text-[10px] text-green-400/60 bg-black/50 px-2 py-1 max-w-[55%] truncate">
+            {activeVideo}
           </div>
         )}
 
-        {activeAlert && (
-          <div className={`absolute top-3 left-1/2 -translate-x-1/2 border rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg animate-pulse pointer-events-none ${ALERT_STYLES[activeAlert.severity]}`}>
-            <span className="text-sm font-semibold tracking-wide">{activeAlert.message}</span>
+        {/* Proactive alert banner */}
+        {activeAlert && alertStyle && (
+          <div className={`absolute top-4 left-1/2 -translate-x-1/2 border ${alertStyle.bar} ${alertStyle.text} px-5 py-2 flex items-center gap-2.5 pointer-events-none shadow-2xl`}>
+            <span className={`w-2 h-2 rounded-full ${alertStyle.dot} animate-ping`} />
+            <span className="font-hud text-sm font-semibold tracking-wider uppercase">{activeAlert.message}</span>
           </div>
         )}
-
-        <div className="absolute bottom-3 right-3 bg-black/60 rounded-lg px-3 py-1">
-          <span className="text-white text-sm font-medium">62 km/h</span>
-        </div>
       </div>
 
-      {/* Detections */}
-      <div className="px-4 py-2 flex flex-wrap gap-2">
+      {/* Detection tags */}
+      <div className="px-4 py-2 flex flex-wrap gap-1.5 border-t border-white/5">
         {detections.map((d, i) => (
-          <span
-            key={i}
-            className="text-xs px-2 py-1 rounded-full border font-medium"
-            style={{
-              color: COLORS[d.label] || COLORS.default,
-              borderColor: (COLORS[d.label] || COLORS.default) + "40"
-            }}
-          >
-            {d.label} {d.confidence}
+          <span key={i} className="font-hud text-[10px] tracking-wider px-2 py-0.5 border rounded-sm"
+            style={{ color: LABEL_COLORS[d.label] || LABEL_COLORS.default, borderColor: (LABEL_COLORS[d.label] || LABEL_COLORS.default) + "30" }}>
+            {d.label.toUpperCase()}
           </span>
         ))}
         {detections.length === 0 && (
-          <span className="text-xs text-gray-600">No detections yet</span>
+          <span className="font-hud text-[10px] tracking-widest text-white/15 uppercase">No detections</span>
         )}
       </div>
 

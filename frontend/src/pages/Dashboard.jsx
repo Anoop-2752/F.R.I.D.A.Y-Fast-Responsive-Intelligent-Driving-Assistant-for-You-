@@ -23,7 +23,7 @@ export default function Dashboard() {
   } = useFriday()
 
   return (
-    <div className="bg-gray-950 h-screen p-3 flex flex-col gap-3 overflow-hidden">
+    <div className="h-screen p-3 flex flex-col gap-3 overflow-hidden" style={{ background: "#080810" }}>
 
       <StatusBar />
 

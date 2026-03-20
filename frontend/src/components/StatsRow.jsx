@@ -1,33 +1,22 @@
 export default function StatsRow({ stats }) {
+  const items = [
+    { label: "HAZARDS",    value: stats.hazards,  unit: "",  color: "text-amber-400" },
+    { label: "ETA",        value: stats.eta,       unit: "",  color: "text-sky-400"   },
+    { label: "DETECTIONS", value: stats.detections,unit: "",  color: "text-green-400" },
+    { label: "AI LATENCY", value: stats.latency === "--" ? "--" : `${stats.latency}s`, unit: "", color: "text-green-400" },
+  ]
+
   return (
-    <div className="grid grid-cols-4 gap-3">
-
-      <div className="bg-gray-900 rounded-xl border border-white/5 p-3">
-        <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Hazards</p>
-        <p className="text-xl font-medium text-amber-400">{stats.hazards}</p>
-        <p className="text-xs text-gray-600 mt-1">active alerts</p>
-      </div>
-
-      <div className="bg-gray-900 rounded-xl border border-white/5 p-3">
-        <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">ETA</p>
-        <p className="text-xl font-medium text-blue-400">{stats.eta}</p>
-        <p className="text-xs text-gray-600 mt-1">estimated</p>
-      </div>
-
-      <div className="bg-gray-900 rounded-xl border border-white/5 p-3">
-        <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Detections</p>
-        <p className="text-xl font-medium text-green-400">{stats.detections}</p>
-        <p className="text-xs text-gray-600 mt-1">this session</p>
-      </div>
-
-      <div className="bg-gray-900 rounded-xl border border-white/5 p-3">
-        <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">AI latency</p>
-        <p className="text-xl font-medium text-green-400">
-          {stats.latency === "--" ? "--" : `${stats.latency}s`}
-        </p>
-        <p className="text-xs text-gray-600 mt-1">avg response</p>
-      </div>
-
+    <div className="flex border border-white/5 rounded-sm overflow-hidden" style={{ background: "#0c0c14" }}>
+      {items.map(({ label, value, color }, i) => (
+        <div
+          key={label}
+          className={`flex-1 flex flex-col justify-center px-4 py-2 ${i < 3 ? "border-r border-white/5" : ""}`}
+        >
+          <p className="text-[9px] text-white/30 tracking-[0.2em] font-hud mb-0.5">{label}</p>
+          <p className={`font-data text-xl font-medium ${color}`}>{value}</p>
+        </div>
+      ))}
     </div>
   )
 }
