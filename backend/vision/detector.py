@@ -3,7 +3,7 @@ from ultralytics import YOLO
 import base64
 import numpy as np
 
-model = YOLO("yolov8n.pt")
+model = YOLO("yolov8s.pt")
 
 RELEVANT_CLASSES = [
     "person", "car", "truck", "bus", "motorcycle",
@@ -11,7 +11,7 @@ RELEVANT_CLASSES = [
 ]
 
 def detect_frame(frame):
-    results = model(frame, verbose=False)[0]
+    results = model(frame, verbose=False, imgsz=320)[0]
     detections = []
 
     for box in results.boxes:
