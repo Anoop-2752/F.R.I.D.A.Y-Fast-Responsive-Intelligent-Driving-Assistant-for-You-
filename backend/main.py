@@ -57,6 +57,7 @@ class BackgroundDetector:
             _, detections = detect_frame(frame)
             with self._lock:
                 self._detections = detections
+            time.sleep(0.35)  # max ~3 YOLO inferences/sec — frees CPU for video stream
 
 
 # ── Shared webcam buffer ─────────────────────────────────────────────────────

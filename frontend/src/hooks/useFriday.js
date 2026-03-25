@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import axios from "axios"
 import { useSpeech } from "./useSpeech"
 
@@ -29,8 +29,19 @@ export function useFriday() {
     hazards: 0,
     detections: 0,
     latency: "--",
-    eta: "--"
+    eta: "--",
+    driveTime: 0
   })
+
+  // Drive time tracker
+  const driveStartRef = useRef(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => {
+      const secs = Math.floor((Date.now() - driveStartRef.current) / 1000)
+      setStats(prev => ({ ...prev, driveTime: secs }))
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
 
   const { speak, stop, speaking, enabled: voiceEnabled, toggle: toggleVoice } = useSpeech()
 
@@ -38,6 +49,7 @@ export function useFriday() {
   const alertCooldowns = useRef({})     // label → timestamp of last alert
   const alertTimerRef = useRef(null)
   const prevDetections = useRef([])     // last frame detections for motion check
+  const fatigueAlertedRef = useRef(false) // fatigue alert fired once per session
 
   const triggerAlert = useCallback((label, rule) => {
     const now = Date.now()
@@ -119,8 +131,18 @@ export function useFriday() {
       setStats(prev => ({
         ...prev,
         hazards,
-        detections: prev.detections + detected.length
+        detections: detected.length   // current frame only, not cumulative
       }))
+
+      // Fatigue alert after 90 minutes of driving
+      const driveMinutes = (Date.now() - driveStartRef.current) / 60000
+      if (driveMinutes >= 90 && !fatigueAlertedRef.current) {
+        fatigueAlertedRef.current = true
+        setActiveAlert({ message: "Driver fatigue detected — take a break", severity: "critical" })
+        speak("Driver fatigue detected. Please take a break.")
+        clearTimeout(alertTimerRef.current)
+        alertTimerRef.current = setTimeout(() => setActiveAlert(null), 8000)
+      }
 
       // Check 1: object must be in center horizontal zone (not on pavement/sides)
       const isCentral = (box) => {

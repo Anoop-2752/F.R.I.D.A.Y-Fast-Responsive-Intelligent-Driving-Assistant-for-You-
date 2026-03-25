@@ -36,6 +36,52 @@
   border-width: 0 2px 2px 0;
 }
 
+/* Scanline overlay on camera feed */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.08) 3px,
+    rgba(0,0,0,0.08) 4px
+  );
+  z-index: 1;
+}
+
+/* Center crosshair */
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(56, 189, 248, 0.25);
+  pointer-events: none;
+}
+.crosshair::before {
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px; height: 1px;
+}
+.crosshair::after {
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px; height: 20px;
+}
+
+/* Waveform recording animation */
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50%       { transform: scaleY(1); }
+}
+.waveform-bar {
+  width: 2px;
+  background: #f87171;
+  border-radius: 1px;
+  animation: wave 0.8s ease-in-out infinite;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }

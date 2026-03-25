@@ -11,7 +11,7 @@ RELEVANT_CLASSES = [
 ]
 
 def detect_frame(frame):
-    results = model(frame, verbose=False, imgsz=320)[0]
+    results = model(frame, verbose=False, imgsz=320, conf=0.70, iou=0.45)[0]
     detections = []
 
     for box in results.boxes:
@@ -19,7 +19,7 @@ def detect_frame(frame):
         class_name = model.names[class_id]
         confidence = float(box.conf[0])
 
-        if class_name in RELEVANT_CLASSES and confidence > 0.5:
+        if class_name in RELEVANT_CLASSES and confidence > 0.70:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             detections.append({
                 "label": class_name,

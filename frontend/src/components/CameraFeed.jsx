@@ -148,7 +148,7 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
       )}
 
       {/* Feed */}
-      <div className="relative flex-1 min-h-0 flex items-center justify-center" style={{ background: "#050508" }}>
+      <div className="relative flex-1 min-h-0 flex items-center justify-center crosshair" style={{ background: "#050508" }}>
         <img
           key={streamUrl}
           src={streamUrl}
@@ -157,44 +157,62 @@ export default function CameraFeed({ detections, onAnalyze, activeAlert }) {
           onError={e => { e.target.style.display = "none" }}
         />
 
+        {/* Scanline overlay */}
+        <div className="scanlines" />
+
         {/* HUD corner brackets */}
         <div className="hud-corners" />
 
-        {/* Extra corners (bottom-left, top-right) */}
-        <div className="absolute inset-3 pointer-events-none">
+        {/* Extra corners */}
+        <div className="absolute inset-3 pointer-events-none" style={{ zIndex: 2 }}>
           <span className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-sky-400/60" />
           <span className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-sky-400/60" />
         </div>
 
+        {/* Bottom-left: REC indicator */}
+        <div className="absolute bottom-4 left-4 flex items-center gap-1.5 pointer-events-none" style={{ zIndex: 3 }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="font-hud text-[9px] tracking-widest text-white/30 uppercase">Live</span>
+        </div>
+
+        {/* Bottom-right: detection count */}
+        <div className="absolute bottom-4 right-4 pointer-events-none" style={{ zIndex: 3 }}>
+          <span className="font-data text-[9px] text-sky-400/40 tracking-widest">{detections.length} OBJ</span>
+        </div>
+
         {detections.length === 0 && (
-          <p className="absolute font-hud text-xs tracking-widest text-white/15 uppercase pointer-events-none">
+          <p className="absolute font-hud text-xs tracking-widest text-white/15 uppercase pointer-events-none" style={{ zIndex: 3 }}>
             {source === "video" ? "Initialising feed..." : "Awaiting camera..."}
           </p>
         )}
 
         {activeVideo && (
-          <div className="absolute top-4 left-4 font-data text-[10px] text-green-400/60 bg-black/50 px-2 py-1 max-w-[55%] truncate">
+          <div className="absolute top-4 left-4 font-data text-[10px] text-green-400/60 bg-black/60 px-2 py-1 max-w-[55%] truncate" style={{ zIndex: 3 }}>
             {activeVideo}
           </div>
         )}
 
         {/* Proactive alert banner */}
         {activeAlert && alertStyle && (
-          <div className={`absolute top-4 left-1/2 -translate-x-1/2 border ${alertStyle.bar} ${alertStyle.text} px-5 py-2 flex items-center gap-2.5 pointer-events-none shadow-2xl`}>
+          <div className={`absolute top-4 left-1/2 -translate-x-1/2 border ${alertStyle.bar} ${alertStyle.text} px-5 py-2.5 flex items-center gap-3 pointer-events-none shadow-2xl`} style={{ zIndex: 4 }}>
             <span className={`w-2 h-2 rounded-full ${alertStyle.dot} animate-ping`} />
-            <span className="font-hud text-sm font-semibold tracking-wider uppercase">{activeAlert.message}</span>
+            <span className="font-hud text-sm font-bold tracking-[0.15em] uppercase">{activeAlert.message}</span>
           </div>
         )}
       </div>
 
       {/* Detection tags */}
       <div className="px-4 py-2 flex flex-wrap gap-1.5 border-t border-white/5">
-        {detections.map((d, i) => (
-          <span key={i} className="font-hud text-[10px] tracking-wider px-2 py-0.5 border rounded-sm"
-            style={{ color: LABEL_COLORS[d.label] || LABEL_COLORS.default, borderColor: (LABEL_COLORS[d.label] || LABEL_COLORS.default) + "30" }}>
-            {d.label.toUpperCase()}
-          </span>
-        ))}
+        {detections.map((d, i) => {
+          const color = LABEL_COLORS[d.label] || LABEL_COLORS.default
+          return (
+            <span key={i} className="font-hud text-[10px] tracking-wider px-2 py-0.5 border rounded-sm flex items-center gap-1.5"
+              style={{ color, borderColor: color + "30", background: color + "08" }}>
+              {d.label.toUpperCase()}
+              <span className="font-data text-[9px] opacity-50">{Math.round(d.confidence * 100)}%</span>
+            </span>
+          )
+        })}
         {detections.length === 0 && (
           <span className="font-hud text-[10px] tracking-widest text-white/15 uppercase">No detections</span>
         )}
